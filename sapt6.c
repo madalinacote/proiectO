@@ -11,18 +11,17 @@
 #include <ctype.h>
 #include <time.h>
 
-#define BUFF_SIZE 4
-#define BUFF_SIZE1 512
+#define BUFF_SIZE 512
 
 int main(int argc, char* argv[])
 {
 	int fin, fout, rd;
-    struct stat var;
+    	struct stat var;
 	
 	char buffer2[BUFF_SIZE];
-	char buffer3[BUFF_SIZE1];
+	char buffer3[BUFF_SIZE];
 
-    char eroare[50] = "Usage: ";  //se formeaza mesajul de eroare conform cerintei
+    	char eroare[50] = "Usage: ";  //se formeaza mesajul de eroare conform cerintei
 	strcat(eroare, argv[0]);
 
 	if(argc != 2)  //verifica numarul de argumente
