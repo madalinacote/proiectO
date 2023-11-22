@@ -1,0 +1,11 @@
+nume fisier: imagine_1.bmp
+dimensiunea fisierului: 4294967282 octeti
+latime: 4294967251
+inaltime: 4294967251
+dimensiunea imaginii: 4294967228 octeti
+identificatorul utilizatorului: 1000
+data ultimei modificari: Wed Nov 22 20:59:42 2023
+contorul de legaturi: 1
+drepturi de acces user: RW-
+drepturi de acces grup: RW-
+drepturi de acces altii: R--
