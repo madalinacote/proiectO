@@ -15,30 +15,39 @@
 #define BUFF_SIZE 512
 #define SIZE 300
 
-void writeAccessRights(struct stat var, char buffer[BUFF_SIZE], int *fout)
+void writeAccessRights(struct stat var, int fout)
 {
-    char bufferDrepturi[3] = "";
-	
-	if(var.st_mode & S_IRUSR)  //se verifica dreptul de citire al userului
-		strcat(bufferDrepturi, "R");
-    else
-		strcat(bufferDrepturi, "-");
-    if(var.st_mode & S_IWUSR)  //se verifica dreptul de scriere al userului
-	    strcat(bufferDrepturi, "W");
+    char buffer[BUFF_SIZE];
+
+    char bufferDrepturi[4] = "";
+
+    if (var.st_mode & S_IRUSR) 
+        strcat(bufferDrepturi, "R");
     else
         strcat(bufferDrepturi, "-");
-    if(var.st_mode & S_IXUSR)  //se verifica dreptul de citire al userului
-	    strcat(bufferDrepturi, "X");
+    if (var.st_mode & S_IWUSR)
+        strcat(bufferDrepturi, "W");
     else
-		strcat(bufferDrepturi, "-");
+        strcat(bufferDrepturi, "-");
+    if (var.st_mode & S_IXUSR)
+        strcat(bufferDrepturi, "X");
+    else
+        strcat(bufferDrepturi, "-");
 
     sprintf(buffer, "drepturi de acces user: %s\n", bufferDrepturi);
-    if(write(*fout, buffer, strlen(buffer)) < 0)
-	{
-	    perror("nu s-a putut efectua scrierea drepturilor userului!");
+    if (write(fout, buffer, strlen(buffer)) < 0)
+    {
+        perror("nu s-a putut efectua scrierea drepturilor userului!");
         exit(5);
-	}
+    }
+
+    strcpy(bufferDrepturi, "");
+
+    // Restul codului pentru drepturile de grup și altora
+    // ...
 	
+    strcpy(bufferDrepturi, "");
+
 	if(var.st_mode & S_IRGRP)  //se verifica dreptul de citire al grupului
 		strcat(bufferDrepturi, "R");
     else
@@ -53,11 +62,12 @@ void writeAccessRights(struct stat var, char buffer[BUFF_SIZE], int *fout)
 		strcat(bufferDrepturi, "-");
 
     sprintf(buffer, "drepturi de acces grup: %s\n", bufferDrepturi);
-    if(write(*fout, buffer, strlen(buffer)) < 0)
+    if(write(fout, buffer, strlen(buffer)) < 0)
 	{
 	    perror("nu s-a putut efectua scrierea drepturilor grupului!");
         exit(5);
 	}
+    strcpy(bufferDrepturi, "");
 
     if(var.st_mode & S_IROTH)  //se verifica dreptul de citire al altora
 		strcat(bufferDrepturi, "R");
@@ -73,11 +83,12 @@ void writeAccessRights(struct stat var, char buffer[BUFF_SIZE], int *fout)
 		strcat(bufferDrepturi, "-");
 
     sprintf(buffer, "drepturi de acces altii: %s\n", bufferDrepturi);
-    if(write(*fout, buffer, strlen(buffer)) < 0)
+    if(write(fout, buffer, strlen(buffer)) < 0)
 	{
 	    perror("nu s-a putut efectua scrierea drepturilor altora!");
         exit(5);
 	}
+    strcpy(bufferDrepturi, "");
 
 }
 
@@ -95,11 +106,11 @@ int main(int argc, char* argv[])
     if(argc != 2)  //verifica numarul de argumente
     {
         perror("numar gresit de argumente!");
-	    exit(1);
-	}
+        exit(1);
+    }
 
 	strcat(eroare, " ");  //se continua mesajul de eroare conform cerintei
-	strcat(eroare, argv[1]);
+    strcat(eroare, argv[1]);
 
     if((stat(argv[1], &var)) < 0) //verifica daca fisierul exista
     {
@@ -113,16 +124,17 @@ int main(int argc, char* argv[])
         exit(3);
     }
 
-    DIR **dir;
-    DIR *dirp;
+    DIR* dir;
     struct dirent *dirInp;
     struct stat target;
 
     char *cale;
+    cale = malloc(strlen(argv[1]) + 1);
+    strcpy(cale, argv[1]);
 
-    *dir = opendir(cale);
+    dir = opendir(cale);
 
-    if(*dir == NULL)
+    if(dir == NULL)
     {
         perror("eroare la deschiderea directorului!");
         exit(4);
@@ -134,40 +146,43 @@ int main(int argc, char* argv[])
         exit(4);
 	}
 
-    while((dirInp = readdir(dirp)) != NULL)  //se parcurge fiecare intrare
+    while ((dirInp = readdir(dir)) != NULL) 
     {
-        char cale[SIZE] = "";  //construim calea pentru fiecare intrare
-        strcpy(cale, argv[1]);
-        char numeFisier[SIZE] = "";
-        strcpy(numeFisier, dirInp->d_name);  //scoatem numele din structura directorului
-        strcpy(cale, "/");
-        strcat(cale, numeFisier);
+        char cale1[SIZE] = "";
+        strcpy(cale1, cale);
+        strcat(cale1, "/");
+        strcat(cale1, dirInp->d_name);
 
-        if((lstat(cale, &var)) < 0)
+        if (lstat(cale1, &var) < 0) 
         {
-            perror("intrarea nu exista!");
-            exit(5);
+            perror("eroare la obtinerea informatiilor despre intrare!");
+            exit(4);
         }
 
-        if(S_ISLNK(var.st_mode))
+    printf("Cale completa: %s\n", cale1);
+    
+        if (S_ISLNK(var.st_mode))
         {
-            if((finLink = open(cale, O_RDONLY)) < 0)  //deschide fisierul de intrare
-	        {
-		        perror("nu s-a putut deschide fisierul de intrare!");
+            // Actualizăm aici cu target
+            if ((finLink = open(cale1, O_RDONLY)) < 0)
+            {
+                perror("nu s-a putut deschide fișierul de intrare!");
                 exit(3);
-	        }
+            }
 
-            if((stat(cale, &target)) < 0)
+            struct stat target;
+            if (fstat(finLink, &target) < 0)
             {
                 perror("eroare la accesarea informatiilor despre legatura simbolica!");
                 exit(4);
             }
+            
             sprintf(buffer3, "numele legaturii simbolice: %s\n", dirInp->d_name);
-            if(write(fout, buffer3, strlen(buffer3)) < 0)
-	        {
-		        perror("nu s-a putut efectua scrierea numelui legaturii!");
+            if (write(fout, buffer3, strlen(buffer3)) < 0)
+            {
+                perror("nu s-a putut efectua scrierea numelui legaturii!");
                 exit(5);
-	        }
+            }
 
             sprintf(buffer3, "dimensiunea legaturii simbolice: %lu\n", var.st_size);
             if(write(fout, buffer3, strlen(buffer3)) < 0)
@@ -183,7 +198,7 @@ int main(int argc, char* argv[])
                 exit(5);
 	        }
             
-            writeAccessRights(var, buffer3, &fout);
+            writeAccessRights(target, fout);
             close(finLink);
         }
 
@@ -191,7 +206,7 @@ int main(int argc, char* argv[])
         {
             if(S_ISREG(var.st_mode))
             {
-                if(strstr(cale, ".bmp") == 0)
+                if(strstr(cale, ".bmp") != NULL)
                 {
                     if((finBMP = open(cale, O_RDONLY)) < 0)  //deschide fisierul de intrare daca e .bmp
 	                {
@@ -206,66 +221,73 @@ int main(int argc, char* argv[])
                         exit(5);
 	                }
 
-                    lseek(finBMP, 2, SEEK_SET);
-                    if(read(finBMP, buffer2, 4) != -1)
+                    lseek(finBMP, 2, SEEK_SET);  //sare peste primii 2 biti (irelevanti) din headerul fisierului
+                    __uint32_t dim_fisier;
+                    if(read(finBMP, &dim_fisier, sizeof(dim_fisier)) != -1)  //citeste urmatorii 4 biti 
                     {
-                        sprintf(buffer3, "dimensiunea fisierului: %lu octeti\n", var.st_size);  
+                        //extrage dimensiunea fisierului din header, o converteste din char in unsigned si apoi o scrie in buffer
+                        sprintf(buffer3, "dimensiunea fisierului: %u octeti\n", dim_fisier);  
                         if(write(fout, buffer3, strlen(buffer3)) < 0)
 	                    {
-		                    perror("nu s-a putut efectua scrierea dimensiunii fisierului .bmp!");
+		                    perror("nu s-a putut efectua scrierea");
                             exit(5);
 	                    }
                     }
                     else
                     {
-                        perror("nu s-a putut efectua citirea fisierului .bmp!");
+                        perror("nu s-a putut efectua citirea!");
                         exit(6);
                     }
 
-                    lseek(finBMP, 12, SEEK_CUR);
-                    if(read(finBMP, buffer2, 4) != -1)
+                    lseek(finBMP, 12, SEEK_CUR);  // Sare la octetul 18 din header
+                    __uint32_t latime, inaltime;
+                    if (read(finBMP, &latime, sizeof(latime)) != -1)  // Citeste urmatorii 4 octeti
                     {
-                        sprintf(buffer3, "latime: %u\n",  (buffer2[0] | (buffer2[1] << 8) | (buffer2[2] << 16) | (buffer2[3] << 24)));
+                        // Extrage latimea imaginii din header, o converteste din char in unsigned si apoi o scrie in buffer
+                        sprintf(buffer3, "latime: %u\n",  latime);
                         if(write(fout, buffer3, strlen(buffer3)) < 0)
-	                    {
-		                    perror("nu s-a putut efectua scrierea latimii fisierului .bmp!");
+                        {
+                            perror("nu s-a putut efectua scrierea");
                             exit(5);
-	                    }
+                        }
                     }
                     else
                     {
-                        perror("nu s-a putut efectua citirea fisierului .bmp!");
+                        perror("nu s-a putut efectua citirea!");
                         exit(6);
                     }
                     
-                    if(read(finBMP, buffer2, 4) != -1)
+                    if(read(finBMP, &inaltime, sizeof(inaltime)) != -1)  // citeste urmatorii 4 octeti
                     {
-                        sprintf(buffer3, "inaltime: %u\n",  (buffer2[0] | (buffer2[1] << 8) | (buffer2[2] << 16) | (buffer2[3] << 24)));
+                        //extrage inaltimea imaginii din header, o converteste din char in unsigned si apoi o scrie in buffer
+                        sprintf(buffer3, "inaltime: %u\n",  inaltime);
                         if(write(fout, buffer3, strlen(buffer3)) < 0)
 	                    {
-		                    perror("nu s-a putut efectua scrierea  inaltimii fisierului .bmp!");
+		                    perror("nu s-a putut efectua scrierea");
                             exit(5);
 	                    }
                     }
                     else
                     {
-                        perror("nu s-a putut efectua citirea fisierului .bmp!");
+                        perror("nu s-a putut efectua citirea!");
                         exit(6);
                     }
 
-                    lseek(finBMP, 8, SEEK_CUR);
-                    if(read(finBMP, buffer2, 4) != -1)
+                    lseek(finBMP, 8, SEEK_CUR);  //sare peste urmatorii 8 octeti (irelevanti) din header
+                    __uint32_t dim_img;
+                    if(read(finBMP, &dim_img, sizeof(dim_img)) != -1)  //citeste urmatorii 4 octeti
                     {
-                        sprintf(buffer3, "dimensiunea imaginii: %u octeti\n", (buffer2[0] | (buffer2[1] << 8) | (buffer2[2] << 16) | (buffer2[3] << 24)));
+                        //extrage dimensiunea imaginii din header, o converteste din char in unsigned si apoi o scrie in buffer
+                        sprintf(buffer3, "dimensiunea imaginii: %u octeti\n", dim_img);
                         if(write(fout, buffer3, strlen(buffer3)) < 0)
 	                    {
-		                    perror("nu s-a putut efectua scrierea dimensiunii imaginii .bmp!");
+		                    perror("nu s-a putut efectua scrierea");
                             exit(5);
 	                    }
                     }
                     else
                     {
-                        perror("nu s-a putut efectua citirea fisierului .bmp!");
+                        perror("nu s-a putut efectua citirea!");
                         exit(6);
                     }
 
@@ -300,7 +322,7 @@ int main(int argc, char* argv[])
                         exit(5);
 	                }
 
-                    writeAccessRights(var, buffer3, &fout);
+                    writeAccessRights(var, fout);
 
                     close(finBMP);
                 }
@@ -319,29 +341,20 @@ int main(int argc, char* argv[])
                         exit(5);
 	                }
 
-                    lseek(fin, 2, SEEK_SET);
-                    if(read(fin, buffer2, 4) != -1)
-                    {
-                        sprintf(buffer3, "dimensiunea fisierului: %lu octeti\n", var.st_size);  
-                        if(write(fout, buffer3, strlen(buffer3)) < 0)
-	                    {
-		                    perror("nu s-a putut efectua scrierea dimensiunii fisierului!");
-                            exit(5);
-	                    }
-                    }
-                    else
-                    {
-                        perror("nu s-a putut efectua citirea fisierului!");
-                        exit(6);
-                    }
-
                     if((stat(cale, &var)) < 0)
 	                {
 		                perror("eroare");
                         exit(7);
 	                }
 
-                    sprintf(buffer3, "identificatorul utilizatorului: %d\n", var.st_uid);  //ia din var id-ul userului
+                    sprintf(buffer3, "dimensiunea fisierului: %lu octeti\n", var.st_size);
+                    if(write(fout, buffer3, strlen(buffer3)) < 0)
+	                {
+		                perror("nu s-a putut efectua scrierea numelui fisierului!");
+                        exit(5);
+	                }
+
+                    sprintf(buffer3, "identificatorul utilizatorului: %u\n", var.st_uid);  //ia din var id-ul userului
                     if(write(fout, buffer3, strlen(buffer3)) < 0)
 	                {
 	                    perror("nu s-a putut efectua scrierea user id-ului fisierului!");
@@ -351,7 +364,6 @@ int main(int argc, char* argv[])
                     time_t ultima_modificare = var.st_mtime;   //ia din var data ultimei modificari
 
                     sprintf(buffer3, "data ultimei modificari: %s", ctime(&ultima_modificare));
-
                     if(write(fout, buffer3, strlen(buffer3)) < 0)
                     {
 	                    perror("nu s-a putut efectua scrierea datei ultimei modificari a fisierului!");
@@ -359,14 +371,13 @@ int main(int argc, char* argv[])
 	                }
 
                     sprintf(buffer3, "contorul de legaturi: %ld\n", var.st_nlink); //ia din var contorul de legaturi
-
 	                if(write(fout, buffer3, strlen(buffer3)) < 0)
                     {
 	                    perror("nu s-a putut efectua scrierea contorului de legaturi al fisierului!");
                         exit(5);
 	                }
 
-                    writeAccessRights(var, buffer3, &fout);
+                    writeAccessRights(var, fout);
                     close(finFile);
                 }
             }
@@ -384,7 +395,7 @@ int main(int argc, char* argv[])
                         exit(4);
                     }
 
-                    sprintf(buffer3, "nume director: %s/n", dirInp->d_name);
+                    sprintf(buffer3, "nume director: %s\n", dirInp->d_name);
                     if(write(fout, buffer3, strlen(buffer3)) < 0)
                     {
                         perror("nu s-a putut efectua scrierea numelui directorului!");
@@ -398,24 +409,21 @@ int main(int argc, char* argv[])
                         exit(5);
                     }
 
-                    writeAccessRights(var, buffer3, &fout);
+                    writeAccessRights(var, fout);
 
-                    if((closedir(*dir)) != 0)
+                    if((closedir(intrare)) != 0)
                     {
                         perror("eroare la inchiderea directorului");   
                         exit(9);
-                    }                   
+                    }
+                    free(cale);
+                    closedir(dir);                 
                 }
             }
         }
     }
 
     close(fout);
-    if((closedir(dirp)) != 0)
-    {
-        perror("eroare la inchiderea directorului");   
-        exit(9);
-    }
-
+    
 	return 0;
 }

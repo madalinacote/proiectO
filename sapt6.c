@@ -10,18 +10,17 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <time.h>
-
-#define BUFF_SIZE 512
+#define BUFF_SIZE1 512
 
 int main(int argc, char* argv[])
 {
 	int fin, fout, rd;
-    	struct stat var;
+    struct stat var;
 	
-	char buffer2[BUFF_SIZE];
-	char buffer3[BUFF_SIZE];
+	char buffer2[BUFF_SIZE1];
+	char buffer3[BUFF_SIZE1];
 
-    	char eroare[50] = "Usage: ";  //se formeaza mesajul de eroare conform cerintei
+    char eroare[50] = "Usage: ";  //se formeaza mesajul de eroare conform cerintei
 	strcat(eroare, argv[0]);
 
 	if(argc != 2)  //verifica numarul de argumente
@@ -39,7 +38,7 @@ int main(int argc, char* argv[])
         exit(0);
     }
 
-    if(!S_ISREG(var.st_mode) || !(strstr(argv[1], ".bmp")) != 0)  //verifica daca este fisier si daca este de tipul bmp
+    if(!S_ISREG(var.st_mode) || !(strstr(argv[1], ".bmp")) != 0) //verifica daca este fisier si daca este de tipul bmp
 	{
         perror(eroare);  //daca nu, se afiseaza mesajul de eroare
         exit(2);
@@ -65,10 +64,11 @@ int main(int argc, char* argv[])
 	}
 
     lseek(fin, 2, SEEK_SET);  //sare peste primii 2 biti (irelevanti) din headerul fisierului
-    if(read(fin, buffer2, 4) != -1)  //citeste urmatorii 4 biti 
+    __uint32_t dim_fisier;
+    if(read(fin, &dim_fisier, sizeof(dim_fisier)) != -1)  //citeste urmatorii 4 biti 
     {
         //extrage dimensiunea fisierului din header, o converteste din char in unsigned si apoi o scrie in buffer
-        sprintf(buffer3, "dimensiunea fisierului: %u octeti\n", (buffer2[0] | (buffer2[1] << 8) | (buffer2[2] << 16) | (buffer2[3] << 24)));  
+        sprintf(buffer3, "dimensiunea fisierului: %u octeti\n", dim_fisier);  
         if(write(fout, buffer3, strlen(buffer3)) < 0)
 	    {
 		    perror("nu s-a putut efectua scrierea");
@@ -81,16 +81,17 @@ int main(int argc, char* argv[])
         exit(6);
     }
 
-    lseek(fin, 12, SEEK_CUR);  //sare peste urmatorii 12 octeti (irelevanti) din header
-    if(read(fin, buffer2, 4) != -1)  //citeste urmatorii 4  octeti
+    lseek(fin, 12, SEEK_CUR);  // Sare la octetul 18 din header
+    __uint32_t latime, inaltime;
+    if (read(fin, &latime, sizeof(latime)) != -1)  // Citeste urmatorii 4 octeti
     {
-        //extrage latimea imaginii din header, o converteste din char in unsigned si apoi o scrie in buffer
-        sprintf(buffer3, "latime: %u\n",  (buffer2[0] | (buffer2[1] << 8) | (buffer2[2] << 16) | (buffer2[3] << 24)));
+    // Extrage latimea imaginii din header, o converteste din char in unsigned si apoi o scrie in buffer
+        sprintf(buffer3, "latime: %u\n",  latime);
         if(write(fout, buffer3, strlen(buffer3)) < 0)
-	    {
-		    perror("nu s-a putut efectua scrierea");
+        {
+            perror("nu s-a putut efectua scrierea");
             exit(5);
-	    }
+        }
     }
     else
     {
@@ -98,10 +99,10 @@ int main(int argc, char* argv[])
         exit(6);
     }
 
-    if(read(fin, buffer2, 4) != -1)  // citeste urmatorii 4 octeti
+    if(read(fin, &inaltime, sizeof(inaltime)) != -1)  // citeste urmatorii 4 octeti
     {
         //extrage inaltimea imaginii din header, o converteste din char in unsigned si apoi o scrie in buffer
-        sprintf(buffer3, "inaltime: %u\n",  (buffer2[0] | (buffer2[1] << 8) | (buffer2[2] << 16) | (buffer2[3] << 24)));
+        sprintf(buffer3, "inaltime: %u\n",  inaltime);
         if(write(fout, buffer3, strlen(buffer3)) < 0)
 	    {
 		    perror("nu s-a putut efectua scrierea");
@@ -115,10 +116,11 @@ int main(int argc, char* argv[])
     }
 
     lseek(fin, 8, SEEK_CUR);  //sare peste urmatorii 8 octeti (irelevanti) din header
-    if(read(fin, buffer2, 4) != -1)  //citeste urmatorii 4 octeti
+    __uint32_t dim_img;
+    if(read(fin, &dim_img, sizeof(dim_img)) != -1)  //citeste urmatorii 4 octeti
     {
         //extrage dimensiunea imaginii din header, o converteste din char in unsigned si apoi o scrie in buffer
-        sprintf(buffer3, "dimensiunea imaginii: %u octeti\n", (buffer2[0] | (buffer2[1] << 8) | (buffer2[2] << 16) | (buffer2[3] << 24)));
+        sprintf(buffer3, "dimensiunea imaginii: %u octeti\n", dim_img);
         if(write(fout, buffer3, strlen(buffer3)) < 0)
 	    {
 		    perror("nu s-a putut efectua scrierea");
