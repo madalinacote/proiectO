@@ -79,7 +79,7 @@ void writeAccessRights(struct stat var, int fout)
 
     sprintf(buffer, "drepturi de acces altii: %s\n", bufferDrepturi);
 
-    sprintf(buffer, "\n");
+    strcat(buffer, "\n");
     if(write(fout, buffer, strlen(buffer)) < 0)
 	{
 	    perror("nu s-a putut efectua scrierea drepturilor altora!");
@@ -123,7 +123,6 @@ int main(int argc, char* argv[])
 
     DIR* dir;
     struct dirent *dirInp;
-    struct stat target;
 
     dir = opendir(argv[1]);
 
